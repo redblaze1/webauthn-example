@@ -21,9 +21,9 @@ func main() {
 
 	var err error
 	webAuthn, err = webauthn.New(&webauthn.Config{
-		RPDisplayName: "Foobar Corp.",     // Display Name for your site
-		RPID:          "localhost",        // Generally the domain name for your site
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+		RPDisplayName: "Foobar Corp.",          // Display Name for your site
+		RPID:          "localhost",             // Generally the domain name for your site
+		RPOrigin:      "http://localhost:8080", // The origin URL for WebAuthn requests
 		// RPIcon: "https://duo.com/logo.png", // Optional icon URL for your site
 	})
 
@@ -39,6 +39,12 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+
+	//有query的handlefunc
+	r.Path("/register/begin/{username}").Queries("name", "{name}").HandlerFunc(BeginRegistration).Name("BeginRegistration")
+	r.Path("/register/finish/{username}").Queries("name", "{name}").HandlerFunc(FinishRegistration).Name("FinishRegistration")
+	r.Path("/login/begin/{username}").Queries("name", "{name}").HandlerFunc(BeginLogin).Name("BeginLogin")
+	r.Path("/login/finish/{username}").Queries("name", "{name}").HandlerFunc(FinishLogin).Name("FinishLogin")
 
 	r.HandleFunc("/register/begin/{username}", BeginRegistration).Methods("GET")
 	r.HandleFunc("/register/finish/{username}", FinishRegistration).Methods("POST")
@@ -61,6 +67,9 @@ func BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, fmt.Errorf("must supply a valid username i.e. foo@bar.com"), http.StatusBadRequest)
 		return
 	}
+	// 拿個Name的query, 先不存起來, 只印出
+	name := r.FormValue("name")
+	fmt.Println("Name: " + name)
 
 	// get user
 	user, err := userDB.GetUser(username)
