@@ -20,6 +20,7 @@
   <br>
   <button onclick="registerUser()">Register</button>
   <button onclick="loginUser()">Login</button>
+  <button onclick="test()">Test jwt</button>
 
   <script>
 
@@ -58,14 +59,26 @@
         alert("Please enter a name");
         return;
       }
+      $.ajaxSetup({
+        crossDomain: true,
+        xhrFields: {
+          withCredentials: true
+        }
+      });
 
-      $.get(
-        '/register/begin/' + username + '?name=' + name,
-        null,
-        function (data) {
+      $.ajax({
+        url: 'https://localhost:8443/v1/users/register/begin/',
+        data: JSON.stringify({
+          email: username,
+          name: name,
+          reason: "for test",
+        }),
+        success: function (data) {
           return data
         },
-        'json')
+        contentType: 'application/json',
+        method: 'POST',
+      })
         .then((credentialCreationOptions) => {
           console.log(credentialCreationOptions)
           credentialCreationOptions.publicKey.challenge = bufferDecode(credentialCreationOptions.publicKey.challenge);
@@ -86,9 +99,9 @@
           let clientDataJSON = credential.response.clientDataJSON;
           let rawId = credential.rawId;
 
-          $.post(
-            '/register/finish/' + username + '?name=' + name,
-            JSON.stringify({
+          $.ajax({
+            url: 'https://localhost:8443/v1/users/register/finish/',
+            data: JSON.stringify({
               id: credential.id,
               rawId: bufferEncode(rawId),
               type: credential.type,
@@ -96,11 +109,12 @@
                 attestationObject: bufferEncode(attestationObject),
                 clientDataJSON: bufferEncode(clientDataJSON),
               },
-            }),
-            function (data) {
+            }), success: function (data) {
               return data
             },
-            'json')
+            contentType: 'application/json',
+            method: 'POST',
+          });
         })
         .then((success) => {
           alert("successfully registered " + username + "!")
@@ -119,14 +133,24 @@
         alert("Please enter a username");
         return;
       }
+      $.ajaxSetup({
+        crossDomain: true,
+        xhrFields: {
+          withCredentials: true
+        }
+      });
 
-      $.get(
-        '/login/begin/' + username + '?name=' + name,
-        null,
-        function (data) {
+      $.ajax({
+        url: 'https://localhost:8443/v1/users/login/begin/',
+        data: JSON.stringify({
+              email: username
+            }),
+        success: function (data) {
           return data
         },
-        'json')
+        contentType: 'application/json',
+        method: 'POST',
+        })
         .then((credentialRequestOptions) => {
           console.log(credentialRequestOptions)
           credentialRequestOptions.publicKey.challenge = bufferDecode(credentialRequestOptions.publicKey.challenge);
@@ -146,9 +170,9 @@
           let sig = assertion.response.signature;
           let userHandle = assertion.response.userHandle;
 
-          $.post(
-            '/login/finish/' + username + '?name=' + name,
-            JSON.stringify({
+          $.ajax({
+            url: 'https://localhost:8443/v1/users/login/finish/',
+            data: JSON.stringify({
               id: assertion.id,
               rawId: bufferEncode(rawId),
               type: assertion.type,
@@ -159,20 +183,50 @@
                 userHandle: bufferEncode(userHandle),
               },
             }),
-            function (data) {
+            success: function (data, status, xhr) {
+              console.log(data)
+              localStorage.token = data.token
+              if (localStorage.token) {
+                xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+              }
               return data
             },
-            'json')
+            contentType: 'application/json',
+            method: 'POST',
+          })
         })
         .then((success) => {
           alert("successfully logged in " + username + "!")
+          console.log(success)
           return
         })
         .catch((error) => {
           console.log(error)
-          alert("failed to register " + username)
+          alert("failed to login " + username)
         })
     }
+
+  function test() {
+
+$.ajax({
+  url: 'https://localhost:8443/v1/test',
+  success: function (data) {
+    return data
+  },
+  contentType: 'application/json',
+  method: 'GET',
+  headers: {"Authorization": 'Bearer ' + localStorage.getItem('token')}
+  })
+  .then((success) => {
+    alert("test jwt success")
+    console.log(success)
+    return
+  })
+  .catch((error) => {
+    console.log(error)
+    alert("failed jwt test")
+  })
+}
 
   </script>
 </body>

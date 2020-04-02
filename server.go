@@ -53,9 +53,9 @@ func main() {
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./")))
 
-	serverAddress := ":8080"
+	serverAddress := ":4443"
 	log.Println("starting server at", serverAddress)
-	log.Fatal(http.ListenAndServe(serverAddress, r))
+	log.Fatal(http.ListenAndServeTLS(serverAddress, "server.crt", "server.key", r))
 }
 
 func BeginRegistration(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,8 @@ func BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		displayName := strings.Split(username, "@")[0]
 		user = NewUser(username, displayName)
-		userDB.PutUser(user)
+		userDB.PutUser(user, name)
+		Outputjson()
 	}
 
 	registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
@@ -138,6 +139,7 @@ func FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.AddCredential(*credential)
+	Outputjson()
 
 	jsonResponse(w, "Registration Success", http.StatusOK)
 }
@@ -210,9 +212,15 @@ func FinishLogin(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	name, err := userDB.GetUsername(username)
+	if err != nil {
+		log.Println(err)
+		jsonResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// handle successful login
-	jsonResponse(w, "Login Success", http.StatusOK)
+	jsonResponse(w, "Login Success With Name: "+name, http.StatusOK)
 }
 
 // from: https://github.com/duo-labs/webauthn.io/blob/3f03b482d21476f6b9fb82b2bf1458ff61a61d41/server/response.go#L15

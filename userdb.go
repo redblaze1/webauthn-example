@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 )
 
 type userdb struct {
@@ -31,19 +32,15 @@ func DB() *userdb {
 // GetUser returns a *User by the user's username
 func (db *userdb) GetUser(name string) (*User, error) {
 
-	// 註解這幾行, 因為讀了會出錯,
-	// 出錯原因: Credentials無法輸出, 所以讀了就會讀到空的Credentials
-	// 所以讀記憶裡的資料就不會出錯
-	// 然後name還沒放進去,先搞定這功能在說
-	// file, err := ioutil.ReadFile("user.json")
-	// if err != nil {
-	// 	return &User{}, errors.New("error reading json")
-	// }
-	// err = json.Unmarshal([]byte(file), &db)
-	// if err != nil {
-	// 	log.Println("OAO " + err.Error())
-	// 	return &User{}, err
-	// }
+	file, err := ioutil.ReadFile("user.json")
+	if err != nil {
+		return &User{}, errors.New("error reading json")
+	}
+	err = json.Unmarshal([]byte(file), &db)
+	if err != nil {
+		log.Println("OAO " + err.Error())
+		return &User{}, err
+	}
 
 	for i, data := range db.Users {
 		if data.Name == name {
@@ -60,7 +57,7 @@ func (db *userdb) GetUser(name string) (*User, error) {
 }
 
 // PutUser stores a new user by the user's username
-func (db *userdb) PutUser(user *User) {
+func (db *userdb) PutUser(user *User, name string) {
 
 	// 存記憶體裡
 	for i, data := range db.Users {
@@ -68,11 +65,17 @@ func (db *userdb) PutUser(user *User) {
 			db.Users[i].Name = user.Name
 			db.Users[i].ID = user.ID
 			db.Users[i].DisplayName = user.DisplayName
-			db.Users[i].Credentials = user.Credentials
+			db.Name[i] = name
+			// Call 這函式的時候根本還沒把Cred拿進來= =
+			// db.Users[i].Credentials = user.Credentials
 			break
 		}
 	}
-	// 存完在存成json
+}
+
+// Outputjson 等有cred的時候在輸出
+func Outputjson() {
+	// 把有Credentials狀態的db轉成json byte
 	wfile, err := json.MarshalIndent(&db, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -83,4 +86,14 @@ func (db *userdb) PutUser(user *User) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// GetUsername returns a name by the user's username
+func (db *userdb) GetUsername(username string) (string, error) {
+	for i, data := range db.Users {
+		if data.Name == username {
+			return db.Name[i], nil
+		}
+	}
+	return "", fmt.Errorf("Error find name")
 }
